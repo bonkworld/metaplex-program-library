@@ -12,7 +12,7 @@ use std::io::Write;
 
 pub mod merkle_proof;
 
-declare_id!("gdrpGjVffourzkdDRrQmySw4aTHr8a3xmQzzxSwFD1a");
+declare_id!("3hPhRB3M16RerH3B8j56P8ZSnFuKs2ZEQojfSspnhfNW");
 
 fn get_or_create_claim_count<'a>(
     distributor: &Account<'a, MerkleDistributor>,
@@ -887,12 +887,81 @@ pub struct CandyMachine {
     pub bump: u8,
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct WhitelistMintSettings {
+    pub mode: WhitelistMintMode,
+    pub mint: Pubkey,
+    pub presale: bool,
+    pub discount_price: Option<u64>,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
+pub enum WhitelistMintMode {
+    // Only captcha uses the bytes, the others just need to have same length
+    // for front end borsh to not crap itself
+    // Holds the validation window
+    BurnEveryTime,
+    NeverBurn,
+}
+
+/// Candy machine settings data.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct CandyMachineData {
     pub uuid: String,
     pub price: u64,
-    pub items_available: u64,
+    /// The symbol for the asset
+    pub symbol: String,
+    /// Royalty basis points that goes to creators in secondary sales (0-10000)
+    pub seller_fee_basis_points: u16,
+    pub max_supply: u64,
+    pub is_mutable: bool,
+    pub retain_authority: bool,
     pub go_live_date: Option<i64>,
+    pub end_settings: Option<EndSettings>,
+    pub creators: Vec<Creator>,
+    pub hidden_settings: Option<HiddenSettings>,
+    pub whitelist_mint_settings: Option<WhitelistMintSettings>,
+    pub items_available: u64,
+    /// If [`Some`] requires gateway tokens on mint
+    pub gatekeeper: Option<GatekeeperConfig>,
+}
+
+/// Configurations options for the gatekeeper.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct GatekeeperConfig {
+    /// The network for the gateway token required
+    pub gatekeeper_network: Pubkey,
+    /// Whether or not the token should expire after minting.
+    /// The gatekeeper network must support this if true.
+    pub expire_on_use: bool,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub enum EndSettingType {
+    Date,
+    Amount,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct EndSettings {
+    pub end_setting_type: EndSettingType,
+    pub number: u64,
+}
+
+/// Hidden Settings for large mints used with offline data.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
+pub struct HiddenSettings {
+    pub name: String,
+    pub uri: String,
+    pub hash: [u8; 32],
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct Creator {
+    pub address: Pubkey,
+    pub verified: bool,
+    // In percentages, NOT basis points ;) Watch out!
+    pub share: u8,
 }
 
 #[error]
